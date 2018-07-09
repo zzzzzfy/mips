@@ -30,6 +30,7 @@ struct pipeline {
 struct order {
 	string name, para[5];
 	_order_value nm;
+	int r1,r2,r3;
 	int num;
 	int val;
 	int tx_nm;
@@ -185,7 +186,10 @@ void memory_layout() {
 		}
 	}
 	for(int i = 0;i<order_num;i++){
+		order[i].r1 = _register[order[i].para[0]];
 		order[i].nm = order_map[order[i].name];
+		order[i].r2 = _register[order[i].para[1]];
+		order[i].r3 = _register[order[i].para[2]];
 		order[i].ad_nm = data_label[order[i].para[order[i].num-1]];
 		order[i].tx_nm = text_label[order[i].para[order[i].num-1]];
 	}
@@ -399,52 +403,64 @@ inline bool preparation() {
 	switch (order[pos].nm) {
 	case _add:case _sub:case _xor:case _rem:case _seq:case _sge:case _sgt:case _sle:case _slt:
 	case _sne:case _addu:case _addiu:case _subu:case _xoru:case _remu:
-		pipe[1].rdest = _register[order[pos].para[0]];
-		pipe[1].rsrc1 = _register[order[pos].para[1]];
+		// pipe[1].rdest = _register[order[pos].para[0]];
+		pipe[1].rdest = order[pos].r1;
+		pipe[1].rsrc1 = order[pos].r2;
+		// pipe[1].rsrc1 = _register[order[pos].para[1]];
 		if (used[pipe[1].rsrc1]) return false;
 		pipe[1].src1 = _r[pipe[1].rsrc1];
 		if (order[pos].flag) pipe[1].src2 = order[pos].val;
 		else {
-			pipe[1].rsrc2 = _register[order[pos].para[2]];
+			pipe[1].rsrc2 = order[pos].r3;
+			// pipe[1].rsrc2 = _register[order[pos].para[2]];
 			if (used[pipe[1].rsrc2]) return false;
 			pipe[1].src2 = _r[pipe[1].rsrc2];
 		}
 		break;
 	case _mul:case _div:case _mulu:case _divu:
 		if ((order[pos].flag && order[pos].num == 2) || order[pos].num == 3) {
-			pipe[1].rdest = _register[order[pos].para[0]];
-			pipe[1].rsrc1 = _register[order[pos].para[1]];
+			// pipe[1].rdest = _register[order[pos].para[0]];
+			// pipe[1].rsrc1 = _register[order[pos].para[1]];
+			pipe[1].rdest = order[pos].r1;
+			pipe[1].rsrc1 = order[pos].r2;
 			if (used[pipe[1].rsrc1]) return false;
 			pipe[1].src1 = _r[pipe[1].rsrc1];
 			if (order[pos].flag) pipe[1].src2 = order[pos].val;
 			else {
-				pipe[1].rsrc2 = _register[order[pos].para[2]];
+				pipe[1].rsrc2 = order[pos].r3;
+				// pipe[1].rsrc2 = _register[order[pos].para[2]];
 				if (used[pipe[1].rsrc2]) return false;
 				pipe[1].src2 = _r[pipe[1].rsrc2];
 			}
 		}
 		else {
-			pipe[1].rdest = _register["$lo"];
-			pipe[1].rsrc1 = _register[order[pos].para[0]];
+			pipe[1].rdest = 32;
+			// pipe[1].rdest = _register["$lo"];
+			pipe[1].rsrc1 = order[pos].r1;
+			// pipe[1].rsrc1 = _register[order[pos].para[0]];
 			if (used[pipe[1].rsrc1]) return false;
 			pipe[1].src1 = _r[pipe[1].rsrc1];
 			if (order[pos].flag) pipe[1].src2 = order[pos].val;
 			else {
-				pipe[1].rsrc2 = _register[order[pos].para[1]];
+				pipe[1].rsrc2 = order[pos].r2;
+				// pipe[1].rsrc2 = _register[order[pos].para[1]];
 				if (used[pipe[1].rsrc2]) return false;
 				pipe[1].src2 = _r[pipe[1].rsrc2];
 			}
 		}
 		break;
 	case _neg:case _negu:
-		pipe[1].rdest = _register[order[pos].para[0]];
-		pipe[1].rsrc1 = _register[order[pos].para[1]];
+		pipe[1].rdest = order[pos].r1;
+		pipe[1].rsrc1 = order[pos].r2;
+		// pipe[1].rdest = _register[order[pos].para[0]];
+		// pipe[1].rsrc1 = _register[order[pos].para[1]];
 		if (used[pipe[1].rsrc1]) return false;
 		pipe[1].src1 = _r[pipe[1].rsrc1];
 		break;
 	case _li:
 		//cout << order[pos].para[0] << endl;
-		pipe[1].rdest = _register[order[pos].para[0]];
+		pipe[1].rdest = order[pos].r1;
+		// pipe[1].rdest = _register[order[pos].para[0]];
 		pipe[1].src1 = order[pos].val;
 		break;
 	case _b:
@@ -452,12 +468,14 @@ inline bool preparation() {
 		// pipe[1].address = text_label[order[pos].para[0]];
 		break;
 	case _beq:case _bne:case _bge:case _ble:case _bgt:case _blt:
-		pipe[1].rsrc1 = _register[order[pos].para[0]];
+		pipe[1].rsrc1 = order[pos].r1;
+		// pipe[1].rsrc1 = _register[order[pos].para[0]];
 		if (used[pipe[1].rsrc1]) return false;
 		pipe[1].src1 = _r[pipe[1].rsrc1];
 		if (order[pos].flag) pipe[1].src2 = order[pos].val;
 		else {
-			pipe[1].rsrc2 = _register[order[pos].para[1]];
+			pipe[1].rsrc2 = order[pos].r2;
+			// pipe[1].rsrc2 = _register[order[pos].para[1]];
 			if (used[pipe[1].rsrc2]) return false;
 			pipe[1].src2 = _r[pipe[1].rsrc2];
 		}
@@ -465,7 +483,8 @@ inline bool preparation() {
 		// pipe[1].address = text_label[order[pos].para[order[pos].num - 1]];
 		break;
 	case _beqz:case _bnez:case _blez:case _bgez:case _bgtz:case _bltz:
-		pipe[1].rsrc1 = _register[order[pos].para[0]];
+		pipe[1].rsrc1 = order[pos].r1;
+		// pipe[1].rsrc1 = _register[order[pos].para[0]];
 		if (used[pipe[1].rsrc1]) return false;
 		pipe[1].src1 = _r[pipe[1].rsrc1];
 		pipe[1].address = order[pos].tx_nm;
@@ -477,25 +496,29 @@ inline bool preparation() {
 		// pipe[1].address = text_label[order[pos].para[0]];
 		break;
 	case _jr:
-		pipe[1].rsrc1 = _register[order[pos].para[0]];
+		pipe[1].rsrc1 = order[pos].r1;
+		// pipe[1].rsrc1 = _register[order[pos].para[0]];
 		if (used[pipe[1].rsrc1]) return false;
 		pipe[1].address = _r[pipe[1].rsrc1];
 		break;
 	case _jal:
-		pipe[1].rdest = _register["$31"];
+		pipe[1].rdest = 31;
 		pipe[1].address = order[pos].tx_nm;
 		// pipe[1].address = text_label[order[pos].para[0]];
 		break;
 	case _jalr:
-		pipe[1].rdest = _register["$31"];
-		pipe[1].rsrc1 = _register[order[pos].para[0]];
+		pipe[1].rdest = 31;
+		pipe[1].rsrc1 = order[pos].r1;
+		// _register[order[pos].para[0]];
 		if (used[pipe[1].rsrc1]) return false;
 		pipe[1].address = _r[pipe[1].rsrc1];
 		break;
 	case _la:case _lb:case _lh:case _lw:
-		pipe[1].rdest = _register[order[pos].para[0]];
+		pipe[1].rdest = order[pos].r1;
+		// pipe[1].rdest = _register[order[pos].para[0]];
 		if (order[pos].flag) {
-			pipe[1].rsrc1 = _register[order[pos].para[1]];
+			pipe[1].rsrc1 = order[pos].r2;
+			// pipe[1].rsrc1 = _register[order[pos].para[1]];
 			if (used[pipe[1].rsrc1]) return false;
 			pipe[1].address = _r[pipe[1].rsrc1] + order[pos].val;
 		}
@@ -503,12 +526,14 @@ inline bool preparation() {
 		// pipe[1].address = data_label[order[pos].para[1]];
 		break;
 	case _sb:case _sh:case _sw:
-		pipe[1].rsrc1 = _register[order[pos].para[0]];
+		pipe[1].rsrc1 = order[pos].r1;
+		// pipe[1].rsrc1 = _register[order[pos].para[0]];
 		//cout << order[pos].para[0] << endl;
 		if (used[pipe[1].rsrc1]) return false;
 		pipe[1].src1 = _r[pipe[1].rsrc1];
 		if (order[pos].flag) {
-			pipe[1].rsrc2 = _register[order[pos].para[1]];
+			pipe[1].rsrc2 = order[pos].r2;
+			// pipe[1].rsrc2 = _register[order[pos].para[1]];
 			if (used[pipe[1].rsrc2]) return false;
 			pipe[1].address = _r[pipe[1].rsrc2] + order[pos].val;
 		}
@@ -516,36 +541,43 @@ inline bool preparation() {
 		// pipe[1].address = data_label[order[pos].para[1]];
 		break;
 	case _move:
-		pipe[1].rdest = _register[order[pos].para[0]];
-		pipe[1].rsrc1 = _register[order[pos].para[1]];
+		pipe[1].rdest = order[pos].r1;
+		pipe[1].rsrc1 = order[pos].r2;
+		// pipe[1].rdest = _register[order[pos].para[0]];
+		// pipe[1].rsrc1 = _register[order[pos].para[1]];
 		if (used[pipe[1].rsrc1]) return false;
 		pipe[1].src1 = _r[pipe[1].rsrc1];
 		break;
 	case _mfhi:
-		pipe[1].rdest = _register[order[pos].para[0]];
-		pipe[1].rsrc1 = _register["$hi"];
+		pipe[1].rdest = order[pos].r1;
+		pipe[1].rsrc1 = 33;
+		// pipe[1].rdest = _register[order[pos].para[0]];
+		// pipe[1].rsrc1 = _register["$hi"];
 		if (used[pipe[1].rsrc1]) return false;
 		pipe[1].src1 = _r[pipe[1].rsrc1];
 		break;
 	case _mflo:
-		pipe[1].rdest = _register[order[pos].para[0]];
-		pipe[1].rsrc1 = _register["$lo"];
+		pipe[1].rdest = order[pos].r1;
+		pipe[1].rsrc1 = 32;
+		// pipe[1].rdest = _register[order[pos].para[0]];
+		// pipe[1].rsrc1 = _register["$lo"];
 		if (used[pipe[1].rsrc1]) return false;
 		pipe[1].src1 = _r[pipe[1].rsrc1];
 		break;
 	case _syscall:
-		pipe[1].rsrc1 = _register["$v0"];
+		pipe[1].rsrc1 = 2;
+		// pipe[1].rsrc1 = _register["$v0"];
 		if (used[pipe[1].rsrc1]) return false;
 		pipe[1].src1 = _r[pipe[1].rsrc1];
 		if (pipe[1].src1 == 1 || pipe[1].src1 == 4 || pipe[1].src1 == 8 || pipe[1].src1 == 9 || pipe[1].src1 == 17) {
-			if (pipe[1].src1 == 9) pipe[1].rdest = _register["$v0"];
-			pipe[1].rsrc2 = _register["$a0"];
+			if (pipe[1].src1 == 9) pipe[1].rdest = 2;
+			pipe[1].rsrc2 = 4;
 			if (used[pipe[1].rsrc2]) return false;
 			pipe[1].src2 = _r[pipe[1].rsrc2];
 			break;
 		}
 		if (pipe[1].src1 == 5) {
-			pipe[1].rdest = _register["$v0"];
+			pipe[1].rdest = 2;
 		}
 		break;
 	}
