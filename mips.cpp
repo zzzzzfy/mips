@@ -644,12 +644,10 @@ void Memory_Access() {
 		case 51 :
 			switch (tmp[4].Src1) {
 				case 1 : 
-                    cout<<tmp[4].Pos<<" "<<order[tmp[4].Pos].op<<"aa:"<<endl;
 					printf("%d\n", tmp[4].Src2);
 					break;
 				case 4 :
 					a = tmp[4].Src2;
-                    cout<<"a:"<<a<<" "<<tmp[4].Pos<<endl;
 					while(data[a] != 0) printf("%c", data[a++]);
 					break;
 				case 5 :
