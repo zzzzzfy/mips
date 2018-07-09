@@ -182,7 +182,7 @@ void memory_layout() {
 	}
 
 }
-void write_back() {
+inline void write_back() {
 	if (!pipe[4].flag) return;
 	bool token = false;
 	int pos = pipe[4].pos;
@@ -297,7 +297,7 @@ void access() {
 	pipe[4] = pipe[3];
 	pipe[3].flag = false;
 }
-void execution() {
+inline void execution() {
 	if (!pipe[2].flag) return;
 	int pos = pipe[2].pos;
 	switch (order_map[order[pos].name]){
@@ -385,7 +385,7 @@ void execution() {
 	pipe[3] = pipe[2];
 	pipe[2].flag = false;
 }
-bool preparation() {
+inline bool preparation() {
 	if (!pipe[1].flag) return true;
 	int pos = pipe[1].pos;//order pos
 	switch (order_map[order[pos].name]) {
@@ -542,7 +542,7 @@ bool preparation() {
 	pipe[1].flag = 0;
 	return true;
 }
-void fetch() {
+inline void fetch() {
 	if (!pipe[0].flag) return;
 	pipe[0].pos = _pc;
 	pipe[1] = pipe[0];
@@ -554,7 +554,7 @@ void work() {//34 -> pc register
 	_pc = text_label["main"];
 	pipe[0].flag = true;
 	while (!sys_end) {
-		kz++;
+		//kz++;
 		////cout << "!!" << endl;
 		////system("pause");
 		/*cout << _pc << endl;
@@ -700,7 +700,6 @@ int main(int argc, char **argv) {
 	//}
 	//cout << endl;
 	work();
-	//cout << kz << endl;
 	/*freopen("a.out","w",stdout);
 	cout << head_top << endl;
 	for (int i = 0; i < head_top; i++) {
