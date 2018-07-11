@@ -23,6 +23,7 @@ map<string, _order_value> order_map;
 struct pipeline {
 	int pos, address, rdest, rsrc1, src1, rsrc2, src2;
 	long long result;
+	bool token;
 	_order_value nm;
 	bool flag;
 }pipe[8];
@@ -30,7 +31,8 @@ struct pipeline {
 struct order {
 	string name, para[5];
 	_order_value nm;
-	int r1,r2,r3;
+	int token;
+	int r1, r2, r3;
 	int num;
 	int val;
 	int tx_nm;
@@ -45,6 +47,8 @@ unsigned char ram[4 * 1024 * 1024 + 5];
 bool isdigital(char c) {
 	return ((c <= '9') && (c >= '0')) || (c == '-');
 }
+int suc_t, tot_t;
+int state_mp[5][3];
 void memory_layout() {
 	string op;
 	bool op_data = false;
@@ -71,7 +75,7 @@ void memory_layout() {
 				int _size;
 				_line >> _size;
 				_size = (1 << _size);
-				head_top += ((_size) - head_top % (_size));
+				head_top += ((_size)-head_top % (_size));
 				continue;
 			}
 			if (op[2] == 's') {//ascii & asciiz
@@ -91,7 +95,7 @@ void memory_layout() {
 					}
 					ram[head_top] = tmp[i];
 					head_top++;
-					
+
 				}
 				if (op[len - 1] == 'z') head_top++;
 				//cout << head_top << endl;
@@ -166,7 +170,7 @@ void memory_layout() {
 				else if (op[len - 1] == ',') {
 					if (isdigital(op[0])) {
 						order[order_num].flag = true;
-						order[order_num].val = atoi(op.substr(0,len-1).data());
+						order[order_num].val = atoi(op.substr(0, len - 1).data());
 					}
 					else order[order_num].para[order[order_num].num++] = op.substr(0, len - 1);
 				}
@@ -185,13 +189,14 @@ void memory_layout() {
 			order_num++;
 		}
 	}
-	for(int i = 0;i<order_num;i++){
+	for (int i = 0; i<order_num; i++) {
 		order[i].r1 = _register[order[i].para[0]];
 		order[i].nm = order_map[order[i].name];
 		order[i].r2 = _register[order[i].para[1]];
 		order[i].r3 = _register[order[i].para[2]];
-		order[i].ad_nm = data_label[order[i].para[order[i].num-1]];
-		order[i].tx_nm = text_label[order[i].para[order[i].num-1]];
+		order[i].ad_nm = data_label[order[i].para[order[i].num - 1]];
+		order[i].tx_nm = text_label[order[i].para[order[i].num - 1]];
+		order[i].token = 0;
 	}
 }
 inline void write_back() {
@@ -220,13 +225,14 @@ inline void write_back() {
 		_r[pipe[4].rdest] = pipe[4].result;
 		break;
 	case _syscall:
-		if (pipe[4].src1 == 10 || pipe[4].src1 == 17) 
+		if (pipe[4].src1 == 10 || pipe[4].src1 == 17)
 			token = true;
 		if (pipe[4].src1 == 5 || pipe[4].src1 == 9)
 			_r[pipe[4].rdest] = pipe[4].result;
 		break;
 	}
-	if (token) {
+	if (pipe[4].token == 0 && token) {
+		suc_t++;
 		_pc = pipe[4].address;
 		if (pipe[3].flag&&pipe[3].rdest > 0) used[pipe[3].rdest]--;
 		if (pipe[3].flag&&pipe[3].rdest == 32) used[33]--;
@@ -241,6 +247,23 @@ inline void write_back() {
 		}
 		else pipe[0].flag = true;
 	}
+	if (pipe[4].token == 1 && token == 0) {
+		suc_t++;
+		_pc = pipe[4].pos + 1;
+		if (pipe[3].flag&&pipe[3].rdest > 0) used[pipe[3].rdest]--;
+		if (pipe[3].flag&&pipe[3].rdest == 32) used[33]--;
+		if (pipe[2].flag&&pipe[2].rdest > 0) used[pipe[2].rdest]--;
+		if (pipe[2].flag&&pipe[2].rdest == 32) used[33]--;
+		pipe[3].flag = pipe[2].flag = pipe[1].flag = pipe[0].flag = false;
+		if (order_map[order[pipe[4].pos].name] == _syscall) {
+			if (pipe[4].src1 == 10 || pipe[4].src1 == 17) {
+				sys_return = pipe[4].src2;
+				sys_end = true;
+			}
+		}
+		else pipe[0].flag = true;
+	}
+	order[pos].token = state_mp[order[pos].token][token];
 	if (pipe[4].rdest > 0) used[pipe[4].rdest]--;
 	if (pipe[4].rdest == 32) used[33]--;
 	pipe[4].flag = false;
@@ -274,7 +297,7 @@ void access() {
 		ram[pipe[3].address + 3] = (pipe[3].src1) % mod;
 		break;
 	case _syscall:
-		switch (pipe[3].src1){
+		switch (pipe[3].src1) {
 			//cout <<"syscall"<<":"<< pipe[3].src1 << endl;
 		case 1:
 			//cout <<pipe[3].pos<<" "<<order[pipe[3].pos].name<< "aa:" << endl;
@@ -293,13 +316,13 @@ void access() {
 			cin >> pipe[3].result;
 			break;
 		case 8:
-			{	
-				cin >> t; 
-				int len = t.length();
-				for (int i = 0; i < len; i++)
-					ram[pipe[3].src2 + i] = t[i];
-			}
-			break;
+		{
+			cin >> t;
+			int len = t.length();
+			for (int i = 0; i < len; i++)
+				ram[pipe[3].src2 + i] = t[i];
+		}
+		break;
 		case 9:
 			pipe[3].result = head_top;
 			head_top += pipe[3].src2;
@@ -312,7 +335,7 @@ void access() {
 inline void execution() {
 	if (!pipe[2].flag) return;
 	int pos = pipe[2].pos;
-	switch (order[pos].nm){
+	switch (order[pos].nm) {
 	case _add:
 		pipe[2].result = pipe[2].src1 + pipe[2].src2;
 		break;
@@ -399,6 +422,7 @@ inline void execution() {
 }
 inline bool preparation() {
 	if (!pipe[1].flag) return true;
+	pipe[1].token = 0;
 	int pos = pipe[1].pos;//order pos
 	switch (order[pos].nm) {
 	case _add:case _sub:case _xor:case _rem:case _seq:case _sge:case _sgt:case _sle:case _slt:
@@ -465,33 +489,34 @@ inline bool preparation() {
 		break;
 	case _b:
 		pipe[1].address = order[pos].tx_nm;
+		pipe[1].token = 1;
 		// pipe[1].address = text_label[order[pos].para[0]];
 		break;
 	case _beq:case _bne:case _bge:case _ble:case _bgt:case _blt:
 		pipe[1].rsrc1 = order[pos].r1;
-		// pipe[1].rsrc1 = _register[order[pos].para[0]];
 		if (used[pipe[1].rsrc1]) return false;
 		pipe[1].src1 = _r[pipe[1].rsrc1];
 		if (order[pos].flag) pipe[1].src2 = order[pos].val;
 		else {
 			pipe[1].rsrc2 = order[pos].r2;
-			// pipe[1].rsrc2 = _register[order[pos].para[1]];
 			if (used[pipe[1].rsrc2]) return false;
 			pipe[1].src2 = _r[pipe[1].rsrc2];
 		}
+		pipe[1].token = (order[pos].token >= 2);
 		pipe[1].address = order[pos].tx_nm;
-		// pipe[1].address = text_label[order[pos].para[order[pos].num - 1]];
+		tot_t++;
 		break;
 	case _beqz:case _bnez:case _blez:case _bgez:case _bgtz:case _bltz:
 		pipe[1].rsrc1 = order[pos].r1;
-		// pipe[1].rsrc1 = _register[order[pos].para[0]];
 		if (used[pipe[1].rsrc1]) return false;
 		pipe[1].src1 = _r[pipe[1].rsrc1];
+		pipe[1].token = (order[pos].token >= 2);
 		pipe[1].address = order[pos].tx_nm;
-		// pipe[1].address = text_label[order[pos].para[order[pos].num - 1]];
 		pipe[1].src2 = 0;
+		tot_t++;
 		break;
 	case _j:
+		pipe[1].token = 1;
 		pipe[1].address = order[pos].tx_nm;
 		// pipe[1].address = text_label[order[pos].para[0]];
 		break;
@@ -499,10 +524,12 @@ inline bool preparation() {
 		pipe[1].rsrc1 = order[pos].r1;
 		// pipe[1].rsrc1 = _register[order[pos].para[0]];
 		if (used[pipe[1].rsrc1]) return false;
+		pipe[1].token = 1;
 		pipe[1].address = _r[pipe[1].rsrc1];
 		break;
 	case _jal:
 		pipe[1].rdest = 31;
+		pipe[1].token = 1;
 		pipe[1].address = order[pos].tx_nm;
 		// pipe[1].address = text_label[order[pos].para[0]];
 		break;
@@ -511,6 +538,7 @@ inline bool preparation() {
 		pipe[1].rsrc1 = order[pos].r1;
 		// _register[order[pos].para[0]];
 		if (used[pipe[1].rsrc1]) return false;
+		pipe[1].token = 1;
 		pipe[1].address = _r[pipe[1].rsrc1];
 		break;
 	case _la:case _lb:case _lh:case _lw:
@@ -581,9 +609,12 @@ inline bool preparation() {
 		}
 		break;
 	}
-	//cout <<" :"<< pipe[1].rdest <<" "<<used[pipe[1].rdest]<< endl;
+	if (pipe[1].token == 1) _pc = pipe[1].address;
+	else {
+		_pc = pos + 1;
+		if (_pc >= order_num) pipe[0].flag = false;
+	}
 	if (pipe[1].rdest > 0) used[pipe[1].rdest]++;
-	//cout << " :" << pipe[1].rdest << " " << used[2] << endl;
 	if (pipe[1].rdest == 32) used[33]++;
 	pipe[2] = pipe[1];
 	pipe[1].flag = 0;
@@ -592,8 +623,9 @@ inline bool preparation() {
 inline void fetch() {
 	if (!pipe[0].flag) return;
 	pipe[0].pos = _pc;
+	pipe[0].token = 0;
 	pipe[1] = pipe[0];
-	_pc++; 
+	//_pc++;
 	if (_pc >= order_num) pipe[0].flag = false;
 }
 int kz;
@@ -606,8 +638,8 @@ void work() {//34 -> pc register
 		////system("pause");
 		/*cout << _pc << endl;
 		for (int i = 0; i <= 4; i++) {
-			cout <<i<<":"<< pipe[i].pos << " " << pipe[i].flag << " " << order[pipe[i].pos].name<<" "
-				<<pipe[i].rdest<<" "<<pipe[i].src1<<" "<<pipe[i].src2<<" "<<pipe[i].rdest<<" "<<pipe[i].result<<" "<<pipe[i].rsrc1<<" "<<pipe[i].rsrc2<<" "<<pipe[i].address<< endl;
+		cout <<i<<":"<< pipe[i].pos << " " << pipe[i].flag << " " << order[pipe[i].pos].name<<" "
+		<<pipe[i].rdest<<" "<<pipe[i].src1<<" "<<pipe[i].src2<<" "<<pipe[i].rdest<<" "<<pipe[i].result<<" "<<pipe[i].rsrc1<<" "<<pipe[i].rsrc2<<" "<<pipe[i].address<< endl;
 		}*/
 
 		////cout << _pc << endl;
@@ -643,7 +675,7 @@ int main(int argc, char **argv) {
 	ios::sync_with_stdio(false);
 	//freopen("22.in", "r", stdin);
 	//freopen("a.out", "w", stdout);
-	_register["$0"] = _register["$zero"] = 0; 
+	_register["$0"] = _register["$zero"] = 0;
 	_register["$1"] = _register["$at"] = 1;
 	_register["$2"] = _register["$v0"] = 2;
 	_register["$3"] = _register["$v1"] = 3;
@@ -677,7 +709,7 @@ int main(int argc, char **argv) {
 	_register["$31"] = _register["$ra"] = 31;
 	_register["$lo"] = 32;
 	_register["$hi"] = 33;
-	_r[29] = 4000000;
+	_r[29] = 4*1024*1024;
 	order_map["add"] = _add;
 	order_map["addu"] = _addu;
 	order_map["addiu"] = _addiu;
@@ -729,6 +761,14 @@ int main(int argc, char **argv) {
 	order_map["mflo"] = _mflo;
 	order_map["nop"] = _nop;
 	order_map["syscall"] = _syscall;
+	state_mp[0][0] = 0;
+	state_mp[0][1] = 1;
+	state_mp[1][0] = 0;
+	state_mp[1][1] = 2;
+	state_mp[2][0] = 1;
+	state_mp[2][1] = 3;
+	state_mp[3][1] = 3;
+	state_mp[3][0] = 2;
 	ifstream fin(argv[1]);
 	string s;
 	while (getline(fin, s)) {
@@ -750,7 +790,7 @@ int main(int argc, char **argv) {
 	/*freopen("a.out","w",stdout);
 	cout << head_top << endl;
 	for (int i = 0; i < head_top; i++) {
-		cout << int(ram[i]) << " ";
+	cout << int(ram[i]) << " ";
 	}*/
 	return sys_return;
 }
